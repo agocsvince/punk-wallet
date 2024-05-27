@@ -1259,7 +1259,7 @@ function App(props) {
             </div>
         </div>
 
-        <div style={{ padding: 10 }}>
+        <div style={{ padding: !receiveMode ? 10 : 0 }}>
           {walletConnectTx ? (
             <Input disabled={true} value={amount} />
           ) : selectedErc20Token ? (
