@@ -74,6 +74,8 @@ export default function ERC20Input({
   const [userValue, setUserValue] = useState();
   const [displayValue, setDisplayValue] = useState();
 
+  const [tempAmount, setTempAmount] = useState();
+
   useEffect(() => {
     if (userValue === 0 || userValue === undefined) {
       return;
@@ -95,7 +97,7 @@ export default function ERC20Input({
   }, [userValue]);
 
   useEffect(() => {
-    if (!amount || !price) {
+    if (!amount || !price || typeof amount === "object") {
       return;
     }
 
@@ -113,7 +115,24 @@ export default function ERC20Input({
     if (typeof amount === "string" && amount.length === 0) {
       resetValues(setUserValue, setDisplayValue, setAmount);
     }
+
+    if (typeof amount === "object") {
+      const decimalCorrectedAmount = parseFloat(ethers.utils.formatUnits(amount, token.decimals));
+
+      setAmount(decimalCorrectedAmount);
+      setTempAmount(decimalCorrectedAmount);
+    }
   }, [amount]);
+
+  useEffect(() => {
+    if (!tempAmount || !price) {
+      return;
+    }
+
+    setDisplayValue(calcDisplayValue(token, tempAmount, dollarMode, price));
+    setTempAmount(undefined);
+
+  }, [tempAmount, price]);
 
   return (
     <div>
@@ -124,7 +143,6 @@ export default function ERC20Input({
             color: "red",
             float: "right",
             marginTop: "-5px",
-            visibility: !receiveMode ? "visible" : "hidden",
           }}
           onClick={() => {
             handleMax(token, setAmount, balance, setDisplayValue, dollarMode, price, setUserValue);
@@ -139,7 +157,12 @@ export default function ERC20Input({
         prefix={<Prefix dollarMode={dollarMode} token={token} />}
         addonAfter={<AmountDollarSwitch token={token} dollarMode={dollarMode} setDollarMode={setDollarMode} />}
         onChange={async e => {
-          setUserValue(e.target.value);
+          if (e.target.value === "") {
+            resetValues(setUserValue, setDisplayValue, setAmount);
+          }
+          else {
+            setUserValue(e.target.value);
+          }
         }}
       />
     </div>

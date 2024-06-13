@@ -1,8 +1,7 @@
 import { Input } from "antd";
 import React, { useEffect, useState } from "react";
 import { useBalance } from "eth-hooks";
-
-const { utils } = require("ethers");
+const { ethers } = require("ethers");
 
 // small change in useEffect, display currentValue if it's provided by user
 
@@ -31,7 +30,15 @@ const { utils } = require("ethers");
   - Control input change by onChange={value => { setAmount(value);}}
 */
 
+const resetValues = (setValue, setDisplayMax, setAmount) => {
+  setValue(undefined);
+  setDisplayMax(undefined);
+  setAmount(undefined);
+};
+
 export default function EtherInput(props) {
+  const setAmount = props.onChange;
+
   const [mode, setMode] = useState(props.ethMode ? props.token : props.price ? "USD" : props.token);
   const [value, setValue] = useState();
   const [displayMax, setDisplayMax] = useState();
@@ -39,6 +46,30 @@ export default function EtherInput(props) {
   const currentValue = typeof props.value !== "undefined" ? props.value : value;
 
   const [display, setDisplay] = useState(currentValue);
+
+
+  useEffect(() => {
+    if (typeof props.value !== "object") {
+      resetValues(setValue, setDisplayMax, setAmount);
+    }
+  }, [props.selectedErc20Token, props.targetNetwork]);
+
+  useEffect(() => {
+    if (typeof props.value === "object") {
+      setDisplayMax(false);
+      
+      const decimalCorrectedAmount = parseFloat(ethers.utils.formatUnits(props.value));
+
+      if (mode !== "USD") {
+        setAmount(decimalCorrectedAmount);
+        setDisplay(decimalCorrectedAmount);
+      }
+      else if (typeof props.price === "number") {
+        setAmount(decimalCorrectedAmount);
+        setDisplay((decimalCorrectedAmount * props.price).toFixed(2));
+      } 
+    }
+  }, [props.value, props.price]);
 
   const balance = useBalance(props.provider, props.address, 1000);
   let floatBalance = parseFloat("0.00");
@@ -51,7 +82,7 @@ export default function EtherInput(props) {
       gasCost = (parseInt(props.gasPrice, 10) * 150000) / 10 ** 18;
     }
 
-    const etherBalance = utils.formatEther(usingBalance);
+    const etherBalance = ethers.utils.formatEther(usingBalance);
     parseFloat(etherBalance).toFixed(2);
     floatBalance = parseFloat(etherBalance - gasCost);
     if (floatBalance < 0) {
@@ -116,38 +147,35 @@ export default function EtherInput(props) {
 
   return (
     <div>
-      <span
-        style={{
-          cursor: "pointer",
-          color: "red",
-          float: "right",
-          marginTop: "-5px",
-          visibility: !props.receiveMode ? "visible" : "hidden",
-        }}
-        onClick={() => {
-          setDisplay(getBalance(mode));
-          setDisplayMax(true);
-          if (typeof props.onChange === "function") {
-            props.onChange(floatBalance);
-          }
-        }}
-      >
-        max
-      </span>
+      {!props.receiveMode && (
+        <span
+          style={{
+            cursor: "pointer",
+            color: "red",
+            float: "right",
+            marginTop: "-5px",
+          }}
+          onClick={() => {
+            setDisplay(getBalance(mode));
+            setDisplayMax(true);
+            setAmount(floatBalance);
+          }}
+        >
+          max
+        </span>
+      )}
       <Input
         placeholder={props.placeholder ? props.placeholder : "amount in " + mode}
         autoFocus={props.autoFocus}
         prefix={prefix}
-        value={display}
+        value={typeof props.value !== "object" ? display : ""}
         addonAfter={addonAfter}
         onChange={async e => {
           const newValue = e.target.value;
           setDisplayMax(false);
 
           if (e.target.value === "") {
-            if (typeof props.onChange === "function") {
-              props.onChange(undefined);
-            }
+            setAmount(undefined);
           }
 
           if (mode === "USD") {
@@ -155,18 +183,14 @@ export default function EtherInput(props) {
             if (possibleNewValue) {
               const ethValue = possibleNewValue / props.price;
               setValue(ethValue);
-              if (typeof props.onChange === "function") {
-                props.onChange(ethValue);
-              }
+              setAmount(ethValue);
               setDisplay(newValue);
             } else {
               setDisplay(newValue);
             }
           } else {
             setValue(newValue);
-            if (typeof props.onChange === "function") {
-              props.onChange(newValue);
-            }
+            setAmount(newValue);
             setDisplay(newValue);
           }
         }}

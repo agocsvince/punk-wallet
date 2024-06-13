@@ -45,7 +45,9 @@ export default function QRPunkBlockie({
         try {
           const decimals = selectedErc20Token ? selectedErc20Token.decimals : 18;
 
-          amountString = ethers.utils.parseUnits(amount.toFixed(decimals).toString(), decimals).toString();
+          amountString = ethers.utils
+            .parseUnits(typeof amount === "string" ? amount : amount.toFixed(decimals).toString(), decimals)
+            .toString();
         } catch (error) {
           console.error("Couldn't parse amount", amount, error);
         }
@@ -60,11 +62,10 @@ export default function QRPunkBlockie({
       }
 
       const eip681 = build(eip681Data);
-      console.log("eip681", eip681);
 
       displayValue = eip681;
 
-      paymentLink = "http://localhost:3000/" + displayValue;
+      paymentLink = window.location.href + displayValue;
     } catch (error) {
       console.error("Couldn't create EIP-681 QR value", error);
     }
@@ -131,7 +132,6 @@ export default function QRPunkBlockie({
             letterSpacing: -0.8,
             color: "#666666",
             fontSize: 14.8,
-            minHeight: "50px",
           }}
         >
           {displayValue}
